@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 1
 ---
 
 # Tạo subnet trên mạng local
@@ -278,7 +278,6 @@ Những bản hardfork update của blockchain. Mình chọn bắt đầu từ b
 
 Khi có bản phát hành giao thức mới, để kích hoạt giao thức đó trên Subnet, ta có thể thêm cấu hình cho giao thức mới vào genesis file và trỏ nó tới một block trong tương lai để block đó là block bắt đầu giao thức.
 
-
 ### Cấu hình phí gas
 
 #### `gasLimit`
@@ -333,9 +332,9 @@ Thì block gas cost lúc này sẽ giảm 200000 * (2 - 10) = -1600000
 
 Ở C-Chain, giá trị này là `200000`.
 
-### Validator Fee Recipient
+### Address nhận phí validate
 
-Cho phép validator nhận phí  khi mine 1 block mới
+Cho phép validator nhận phí khi mine 1 block mới
 
 ```json
 {
@@ -347,6 +346,304 @@ Cho phép validator nhận phí  khi mine 1 block mới
 
 ### Precompiles
 
-Ta có thể kích hoạt một số smart contracts được pre-compile trước trong genesis file. Những smart contracts này cung cấp các chức năng hữu ích cho một số trường hợp. Nếu bạn không muốn sử dụng chúng, ta có thể tắt chúng bằng cách đặt các trường cấu hình thành null hoặc chỉ cần xóa chúng khỏi genesis file.
+Ta có thể kích hoạt một số smart contracts được pre-compile trước trong genesis file. Những smart contracts này cung cấp các chức năng hữu ích cho một số trường hợp. Nếu bạn không muốn sử dụng chúng, ta có thể tắt chúng bằng cách set giá trị là null hoặc chỉ cần xóa những thuộc tính này genesis file.
+
+
+#### `contractDeployerAllowListConfig`
+
+Cấu hình này cho phép những address nào được phép deploy smart contract.
+Ta điều chỉnh danh sách này trong phần `contractDeployerAllowListConfig` thành một đối tượng JSON với các thuộc tính sau:
+
+```json
+"contractDeployerAllowListConfig": {
+  "blockTimestamp": 0,
+  "adminAddresses": ["0x64470E5F5DD38e497194BbcAF8Daa7CA578926F6", "0xf1684DaCa9FE469189A3202ae2dE25E80dcB90a1"]
+}
+```
+Smart contract quản lý danh sách admin có thể deploy smart contract là `0x0200000000000000000000000000000000000000`. Ta vẫn có thể thay đổi danh sách này sau khi đã triển khai blockchain
+[Có thể xem chi tiết tại document của Avalanche.](https://docs.avax.network/subnets/customize-a-subnet#restricting-smart-contract-deployers)
+
+#### `contractNativeMinterConfig`
+
+Cấu hình này cho phép những address nào được phép mint thêm native tokens thông qua một smart contract đặc biệt.
+
+Ta điều chỉnh danh sách này trong phần `contractDeployerAllowListConfig` thành một đối tượng JSON với các thuộc tính sau:
+
+```json
+"contractNativeMinterConfig": {
+  "blockTimestamp": 0,
+  "adminAddresses": ["0x64470E5F5DD38e497194BbcAF8Daa7CA578926F6", "0xf1684DaCa9FE469189A3202ae2dE25E80dcB90a1"]
+}
+```
+
+Smart contract quản lý danh sách admin có thể mint thêm native token là `0x0200000000000000000000000000000000000001`. Ta vẫn có thể thay đổi danh sách này sau khi đã triển khai blockchain
+[Có thể xem chi tiết tại document của Avalanche.](https://docs.avax.network/subnets/customize-a-subnet#minting-native-coins)
+
+
+#### `txAllowListConfig`
+
+Cấu hình này cho phép những address nào được phép thực hiện transaction. Phù hợp cho việc build private blockchain.
+
+Ta điều chỉnh danh sách này trong phần `txAllowListConfig` thành một đối tượng JSON với các thuộc tính sau:
+
+```json
+"txAllowListConfig": {
+  "blockTimestamp": 0,
+  "adminAddresses": ["0x64470E5F5DD38e497194BbcAF8Daa7CA578926F6", "0xf1684DaCa9FE469189A3202ae2dE25E80dcB90a1"]
+}
+```
+
+Smart contract quản lý danh sách address có thể gửi transaction là `0x0200000000000000000000000000000000000002`. Ta vẫn có thể thay đổi danh sách này sau khi đã triển khai blockchain
+
+[Có thể xem chi tiết tại document của Avalanche.](https://docs.avax.network/subnets/customize-a-subnet#restricting-who-can-submit-transactions)
+
+### Genesis Block
+
+`nonce`, `timestamp`, `extraData`, `gasLimit`, `difficulty`, `mixHash`, `coinbase`, `parentHash`, `gasUsed`, `number` là các trường được sử dụng để xác định genesis block header. Ta sẽ không cần phải thay đổi những điều này. (ngoại trừ trường `gasLimit`)
+
+### Native Token Allocation
+
+Để khởi tạo lượng cung ban đầu của native token. T sửa giá trị `alloc` trong file json với thuộc tính sau:
+
+```json
+{
+  "address_without_0x": {
+    "balance": "balance"
+  }
+}
+```
+
+Có hai điều cần lưu ý:
+
+- `address_without_0x`: Là address acount sẽ nhận native tokens vàol lúc khởi tạo chain. Ta phải bỏ `0x` ở đầu address.
+- `balance`: giá trị ở dạng wei mà account sẽ nhận được.
+
+Ở trong genesis file của localSubnet, giá trị balance là `0xd3c21bcecceda1000000` tương ứng với `1000000000000000000000000` wei. Số này bằng với 1,000,000 ở dạng `ether`
+
+## Tạo Genesis File và tuỳ biến
+
+Bây giờ chúng ta có thể tạo tệp genesis của mình!
+
+Ta cần tạo một blockchain mà phí gas sẽ cao hơn C-Chain một chút, đồng thời config burn gas fee để tránh lạm phát.
+
+Để bắt đầu, hãy tạo một tệp mới có tên `genesis.json`:
+
+```bash
+touch genesis.json
+```
+
+Sau đó, xem cấu hình `genesis` file của localSubnet mà ta đã tạo ở trên, ta sẽ theo format này.
+
+```bash
+avalanche subnet describe localSubnet --genesis
+```
+
+Ta có kết quả như sau:
+
+```json
+{
+  {
+    "config": {
+        "chainId": 130397,
+        "feeConfig": {
+            "gasLimit": 8000000,
+            "targetBlockRate": 2,
+            "minBaseFee": 25000000000,
+            "targetGas": 15000000,
+            "baseFeeChangeDenominator": 36,
+            "minBlockGasCost": 0,
+            "maxBlockGasCost": 1000000,
+            "blockGasCostStep": 200000
+        },
+        "homesteadBlock": 0,
+        "eip150Block": 0,
+        "eip150Hash": "0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0",
+        "eip155Block": 0,
+        "eip158Block": 0,
+        "byzantiumBlock": 0,
+        "constantinopleBlock": 0,
+        "petersburgBlock": 0,
+        "istanbulBlock": 0,
+        "muirGlacierBlock": 0,
+        "subnetEVMTimestamp": 0
+    },
+    "nonce": "0x0",
+    "timestamp": "0x0",
+    "extraData": "0x",
+    "gasLimit": "0x7a1200",
+    "difficulty": "0x0",
+    "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "coinbase": "0x0000000000000000000000000000000000000000",
+    "alloc": {
+        "8db97c7cece249c2b98bdc0226cc4c2a57bf52fc": {
+            "balance": "0xd3c21bcecceda1000000"
+        }
+    },
+    "airdropHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "airdropAmount": null,
+    "number": "0x0",
+    "gasUsed": "0x0",
+    "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "baseFeePerGas": null
+}
+}
+```
+
+Đây là một file gốc đã được generate sẵn từ Avalanche CLI. Ta sẽ copy cấu hình này để cho đúng định dạng, và sẽ thay đổi một số tin. 
+
+### Chọn chainID
+
+Chọn một số chưa tồn tại để làm [chain id](#chainid) cho blockchain của chúng ta. Kiểm tra tại [chainlist](https://chainlist.org/) để xem chainId này đã có chain nào dùng hay chưa. Hôm nay là ngày 3-10-2022 do đó mình chọn luôn `3102022` và nó chưa được ai dùng.
+
+```json
+{
+  "config": {
+    "chainId": 3102022
+  }
+}
+```
+
+### Cấu hình phí gas
+
+Vì máy của mình cấu hình tương đối mạnh. Do đó, mình sẽ đặt `gasLimit` thành` 20.000.000` để có thể xử lý được nhiều transaction hơn trong 1 block, `targetBlockRate` thành 3 giây và` targetGas` thành `20000000`.
+
+Phần `minBaseFee` thành 60 nAvax (gwei) là` 60000000000` wei để đảm bảo rằng phí giao dịch đủ cao để giúp network giảm phát.
+
+Cấu hình giá trị `baseFeeChangeDenominator` thành` 50`, `minBlockGasCost` thành` 0 ', `maxBlockGasCost` thành` 5000000` và `blockGasCostStep` thành` 100000` vì mình không muốn chi phí gas khối thay đổi quá nhanh.
+
+Cấu hình cuối cùng trông như sau:
+
+```json
+{
+  "config": {
+    "feeConfig": {
+      "gasLimit": 20000000,
+      "targetBlockRate": 2,
+      "minBaseFee": 60000000000,
+      "targetGas": 10000000,
+      "baseFeeChangeDenominator": 50,
+      "minBlockGasCost": 0,
+      "maxBlockGasCost": 5000000,
+      "blockGasCostStep": 10000
+    }
+  }
+}
+```
+
+Đồng thời cập nhật `gasLimit` trong genesis block header.
+
+```json
+{
+  "config": {
+    ...
+  },
+  "gasLimit": "20000000"
+}
+```
+
+### Cấu hình tổng cung ban đầu
+
+Chỉ định address `0x149f7F3Eb5B5aAf004E6e2250A632BfD5600700C` sẽ nhận 1000 tokens, tương ứng là `1000000000000000000000` wei. Giá trị này sẽ được biểu diễn ở dạng hex. Ta dùng [tool](https://www.rapidtables.com/convert/number/decimal-to-hex.html) này để chuyển đổi.
+
+```json
+{
+  "alloc": {
+    "149f7F3Eb5B5aAf004E6e2250A632BfD5600700C": {
+      "balance": "0x3635C9ADC5DEA00000"
+    }
+  }
+}
+```
+
+Cuối cùng, ta có file config như sau:
+
+```json
+{
+  "config": {
+    "chainId": 3102022,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip150Hash": "0x2086799aeebeae135c246c65021c82b4e15a2c451340993aacfd2751886514f0",
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "muirGlacierBlock": 0,
+    "SubnetEVMTimestamp": 0,
+    "feeConfig": {
+      "gasLimit": 20000000,
+      "targetBlockRate": 5,
+      "minBaseFee": 60000000000,
+      "targetGas": 20000000,
+      "baseFeeChangeDenominator": 50,
+      "minBlockGasCost": 0,
+      "maxBlockGasCost": 5000000,
+      "blockGasCostStep": 10000
+    },
+  },
+  "alloc": {
+    "149f7F3Eb5B5aAf004E6e2250A632BfD5600700C": {
+      "balance": "0x3635C9ADC5DEA00000"
+    }
+  },
+  "nonce": "0x0",
+  "timestamp": "0x0",
+  "extraData": "0x00",
+  "gasLimit": "5000000",
+  "difficulty": "0x0",
+  "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "coinbase": "0x0000000000000000000000000000000000000000",
+  "number": "0x0",
+  "gasUsed": "0x0",
+  "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}
+```
+
+## Tạo và triển khai Subnet với Genesis file
+
+Chúng tôi sẽ sử dụng `genesis.json` để tạo một subnet mới.
+
+Trước tiên, xóa Subnet cũ mà chúng ta đã tạo lúc trước.
+
+```bash
+avalanche subnet delete localSubnet
+
+> Deleted Subnet
+```
+
+Tiếp theo, chúng ta sẽ tạo một Subnet mới bằng cách sử dụng genesis file
+
+```bash
+## avalanche subnet create <SubnetName> --file <filepath>
+avalanche subnet create localSubnet --file ./genesis.json
+```
+
+```bash
+## Use SubnetEVM
+
+> Using specified genesis
+> ✔ SubnetEVM
+> Successfully created genesis
+```
+
+Tiếp tục là deploy lên local
+
+```bash
+## avalanche subnet deploy <SubnetName>
+avalanche subnet deploy localSubnet
+
+## choose local network as deployment target
+
+> Metamask connection details (any node URL from above works):
+> RPC URL:          http://127.0.0.1:27200/ext/bc/HGwbjkQsvrqy2mncMWsA2YnrSWEybVmLcZJwz7nb5gNVvcPoi/rpc
+> Funded address:   0x149f7F3Eb5B5aAf004E6e2250A632BfD5600700C with 1000
+> Network name:     localSubnet
+> Chain ID:         3102022
+> Currency Symbol:  TH
+```
+
+Xong! Đã hoàn thành tạo được một blockchain chạy trên máy của ta.
 
 
